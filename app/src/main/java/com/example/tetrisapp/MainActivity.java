@@ -1,6 +1,7 @@
 package com.example.tetrisapp;
 
 
+import android.content.Intent;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -69,13 +70,24 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        iniciarJuego();
-    }
-    //---------------------------------------------------------------TABLERO LÓGICO------------------------------------------------------------------------
-    public void iniciarJuego(){
         crearTableroLogico();
         crearTableroInterfaz();
         inicializarFiguras();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        iniciarJuego();
+    }
+
+    public void gameOver(){
+        Intent i = new Intent(this,GameOver.class);
+        startActivity(i);
+        finish();
+    }
+    //---------------------------------------------------------------TABLERO LÓGICO------------------------------------------------------------------------
+    public void iniciarJuego(){
         escogerFigura();
         ponerFigura();
         llenarTableroUnos();
@@ -323,7 +335,7 @@ public class MainActivity extends AppCompatActivity {
                 actualizarPosicionActualColumnas(i,posicionCentralfilas+i);
             }
         }else{
-            Log.i("GAMEOVER","YA NO CABEN FIGURAS");
+            gameOver();
         }
     }
     //Actualizar la posición actual de la figura en las columnas
