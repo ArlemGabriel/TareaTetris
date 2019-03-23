@@ -4,6 +4,7 @@ package com.example.tetrisapp;
 import android.content.Intent;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -45,10 +46,15 @@ public class MainActivity extends AppCompatActivity {
     String nombreFiguraActual;
     //Declaración variable que contiene el número de fila actual completa
     int filaCompleta;
-    //Declaración de número aleatorio que guarda el color de la figura
-    int numeroAleatorio;
     ArrayList<String> coordAnterioresFigura = new ArrayList<>();
-
+    final Handler handler = new Handler();
+    final Runnable caidaPieza = new Runnable() {
+        @Override
+        public void run() {
+            handler.postDelayed(this,900);
+            moverPieza();
+        }
+    };
     ArrayList<Integer> tableroUnos = new ArrayList<>();
     ArrayList<String> tags = new ArrayList<>(Arrays.asList("0,0","0,1","0,2","0,3","0,4","0,5","0,6","0,7","0,8","0,9","0,10",
             "1,0","1,1","1,2","1,3","1,4","1,5","1,6","1,7","1,8","1,9","1,10",
@@ -80,8 +86,8 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         iniciarJuego();
     }
-
     public void gameOver(){
+        handler.removeCallbacks(caidaPieza);
         Intent i = new Intent(this,GameOver.class);
         startActivity(i);
         finish();
@@ -92,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
         ponerFigura();
         llenarTableroUnos();
         actualizarTableroGrafico();
+        runnable();
     }
     //Creación del tablero lógico con el uso de una matriz de 15x10
     public void crearTableroLogico(){
@@ -120,26 +127,17 @@ public class MainActivity extends AppCompatActivity {
     }
     //Determina si hay una colision cuando se pone la primer pieza
     public boolean hayColisionInicio(){
-        boolean hayColisionInicial =false;
-        int tamañoSubarreglo = subarreglo.size()-1;
-
-        for(int i=0;i<=tamañoSubarreglo;i++){
-            if(tablero[i+1][posicionCentral-1] == 1 && subarreglo.get(i).get(0) == 1){
-                hayColisionInicial=true;
-                break;
-            }else if(tablero[i+1][posicionCentral] == 1 && subarreglo.get(i).get(1)==1){
-                hayColisionInicial=true;
-                break;
-            }else if(tablero[i+1][posicionCentral+1] == 1 && subarreglo.get(i).get(2) ==1){
-                hayColisionInicial=true;
-                break;
+        boolean hayColisionInicial = false;
+        int largoColumna = totalColumnas-1;
+        for(int i=0; i<=largoColumna;i++){
+            if(tablero[1][i]==1){
+                hayColisionInicial =true;
             }
         }
         return hayColisionInicial;
-
     }
     //Determina si hay una colisión hacia la derecha
-    public boolean hayColisionLados(){
+    public boolean hayColisionLados(String pBtnPresionado){
         borrarPosicionAnterior();
         boolean hayColisionLados=false;
         int tamañoSubarreglo = subarreglo.size()-1;
@@ -149,26 +147,31 @@ public class MainActivity extends AppCompatActivity {
         int pos1Figura;
         int pos2Tablero;
         int pos2Figura;
-        for(int i=0;i<=tamañoSubarreglo;i++){
-            pos0Tablero = tablero[i+posicionCentralfilas][posicionCentral-1];
-            pos0Figura = subarreglo.get(i).get(0);
-            if((pos0Tablero==1 || pos0Tablero==-1) && pos0Figura==1){
-                hayColisionLados = true;
-                break;
-            }
-            pos1Tablero = tablero[i+posicionCentralfilas][posicionCentral];
-            pos1Figura = subarreglo.get(i).get(1);
-            if((pos1Tablero==1 || pos1Tablero==-1) && pos1Figura==1){
-                hayColisionLados = true;
-                break;
-            }
-            pos2Tablero = tablero[i+posicionCentralfilas][posicionCentral+1];
-            pos2Figura = subarreglo.get(i).get(2);
-            if((pos2Tablero==1 || pos2Tablero==-1) && pos2Figura==1){
-                hayColisionLados = true;
-                break;
+        if((posicionCentral==0 && pBtnPresionado=="btnIzquierdaClicked")||(posicionCentral==10 && pBtnPresionado=="btnDerechaClicked")){
+            hayColisionLados=true;
+        }else{
+            for(int i=0;i<=tamañoSubarreglo;i++){
+                pos0Tablero = tablero[i+posicionCentralfilas][posicionCentral-1];
+                pos0Figura = subarreglo.get(i).get(0);
+                if((pos0Tablero==1 || pos0Tablero==-1) && pos0Figura==1){
+                    hayColisionLados = true;
+                    break;
+                }
+                pos1Tablero = tablero[i+posicionCentralfilas][posicionCentral];
+                pos1Figura = subarreglo.get(i).get(1);
+                if((pos1Tablero==1 || pos1Tablero==-1) && pos1Figura==1){
+                    hayColisionLados = true;
+                    break;
+                }
+                pos2Tablero = tablero[i+posicionCentralfilas][posicionCentral+1];
+                pos2Figura = subarreglo.get(i).get(2);
+                if((pos2Tablero==1 || pos2Tablero==-1) && pos2Figura==1){
+                    hayColisionLados = true;
+                    break;
+                }
             }
         }
+
         restaurarPosicionAnterior();
         return hayColisionLados;
     }
@@ -207,14 +210,9 @@ public class MainActivity extends AppCompatActivity {
     }
     //Determina si hay colisión al rotar una pieza
     public boolean hayColisionRotar(){
-        Log.i("ENTRE:","COLISIONROTAR");
-        Log.i("TABLERO","ANTES DE HACER COLISION ROTAR++++++++++++++++"+tableroUnos.toString());
         boolean hayColisionRotar = false;
         ArrayList<ArrayList<Integer>> subarregloTemp = obtenerRotacionTemp();
         borrarPosicionAnterior();
-
-        Log.i("ROTATEMPA",String.valueOf(subarregloTemp.toString()));
-        Log.i("ROTATEMPB",String.valueOf(subarregloTemp.toString()));
         int tamañoSubarreglo = subarregloTemp.size()-1;
         int pos0Tablero;
         int pos0Figura;
@@ -226,30 +224,22 @@ public class MainActivity extends AppCompatActivity {
             pos0Tablero = tablero[i+posicionCentralfilas][posicionCentral-1];
             pos0Figura = subarregloTemp.get(i).get(0);
             if((pos0Tablero==1 || pos0Tablero==-1) && pos0Figura==1){
-                Log.i("ENTRE:","PRIMER IF");
                 hayColisionRotar = true;
                 break;
             }
             pos1Tablero = tablero[i+posicionCentralfilas][posicionCentral];
             pos1Figura = subarregloTemp.get(i).get(1);
             if((pos1Tablero==1 || pos1Tablero==-1) && pos1Figura==1){
-                Log.i("ENTRE:","SEGUNDO IF");
-                Log.i("CON i:",String.valueOf(i));
                 hayColisionRotar = true;
                 break;
             }
             pos2Tablero = tablero[i+posicionCentralfilas][posicionCentral+1];
             pos2Figura = subarregloTemp.get(i).get(2);
-            Log.i("VALOR I:",String.valueOf(i));
-            Log.i("POS2TABLERO:",String.valueOf(pos2Tablero));
-            Log.i("POS2FIGURA",String.valueOf(pos2Figura));
             if((pos2Tablero==1 || pos2Tablero==-1) && pos2Figura==1){
-                Log.i("ENTRE:","TERCER IF");
                 hayColisionRotar = true;
                 break;
             }
         }
-        Log.i("RESULTAOD:",String.valueOf(hayColisionRotar));
         restaurarPosicionAnterior();
         return hayColisionRotar;
     }
@@ -257,10 +247,7 @@ public class MainActivity extends AppCompatActivity {
     public ArrayList<ArrayList<Integer>> obtenerRotacionTemp(){
         int largoArregloFiguras = Figuras.size()-1;
         ArrayList<ArrayList<Integer>> figuraTActualArray = new ArrayList<>();
-        Log.i("SUBARREGLO",String.valueOf(subarreglo));
         figuraTActualArray = subarreglo;
-
-        Log.i("ARREGLOA",String.valueOf(figuraTActualArray.toString()));
 
         for(int i=0;i<=largoArregloFiguras;i++) {
             objetoFigura = Figuras.get(i);
@@ -294,8 +281,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
-        Log.i("ARREGLOB",String.valueOf(figuraTActualArray.toString()));
-        //OJO AQUI
         return figuraTActualArray;
     }
     //Método que elige de manera aleatoria las figuras
@@ -305,7 +290,6 @@ public class MainActivity extends AppCompatActivity {
         objetoFigura = Figuras.get(numeroAleatorio);
         subarreglo = objetoFigura.getFiguraBase();
         nombreFiguraActual = objetoFigura.getNombre();
-        //subarregloToString();
     }
     //Pone figura al inicio del tablero parte lógica
     public void ponerFigura(){
@@ -317,21 +301,20 @@ public class MainActivity extends AppCompatActivity {
         posicionCentralfilas = 1;
         savepoints.clear();
         points.clear();
-        if(hayColisionInicio()==false){
+        //Verifica si hay una colisión al inicio
+        boolean hayColisionInicial = false;
+        hayColisionInicial = hayColisionInicio();
+        if(hayColisionInicial==false){
             for(int i=0;i<=tamañoSubarreglo;i++) {
                 if(subarreglo.get(i).get(0)==1){
                     tablero[i + 1][posicionCentral - 1] = subarreglo.get(i).get(0);;
                 }
                 if(subarreglo.get(i).get(1)==1) {
-                    //Log.i("Dentro1: ", String.valueOf(subarreglo[i][0]));
                     tablero[i + 1][posicionCentral] = subarreglo.get(i).get(1);;
                 }
                 if(subarreglo.get(i).get(2)==1) {
-                    //Log.i("Dentro2: ", String.valueOf(subarreglo[i][1]));
                     tablero[i + 1][posicionCentral + 1] = subarreglo.get(i).get(2);;
                 }
-                //Log.i("Dentro3: ", String.valueOf(subarreglo[i][2]));
-                escogerColorFigura();
                 actualizarPosicionActualColumnas(i,posicionCentralfilas+i);
             }
         }else{
@@ -396,23 +379,14 @@ public class MainActivity extends AppCompatActivity {
     }
     //Método para mover la figura hacia abajo
     public void moverFiguraAbajo(){
-        int tamañoSubarreglo = subarreglo.size()-1;
-        for(int i=0;i<=tamañoSubarreglo;i++){
-            if(subarreglo.get(i).get(0)==1) {
-                tablero[i + posicionCentralfilas][posicionCentral - 1] = subarreglo.get(i).get(0);
-            }
-            if(subarreglo.get(i).get(1)==1) {
-                tablero[i + posicionCentralfilas][posicionCentral] = subarreglo.get(i).get(1);
-            }
-            if(subarreglo.get(i).get(2)==1) {
-                tablero[i + posicionCentralfilas][posicionCentral + 1] = subarreglo.get(i).get(2);
-            }
-            actualizarPosicionActualFilas(i,i+posicionCentralfilas);
-        }
+        posicionarNuevaFigura();
     }
     //Método para rotar la figura
     public void rotarFigura(){
         obtenerRotacion();
+        posicionarNuevaFigura();
+    }
+    public void posicionarNuevaFigura(){
         int tamañoSubarreglo = subarreglo.size()-1;
         for(int i=0;i<=tamañoSubarreglo;i++){
             if(subarreglo.get(i).get(0)==1) {
@@ -540,16 +514,17 @@ public class MainActivity extends AppCompatActivity {
         //generador de numeros aleatorios
         Random generadorAleatorios = new Random();
         //Genera un número entre 0 y el largo del arreglo figuras
-        int numero = generadorAleatorios.nextInt(pLargoLista)+1;
+        int numero = generadorAleatorios.nextInt(pLargoLista+1);
         //imprimo el numero en consola
         return numero;
     }
     //Método que mueve la figura hacia la derecha
     public void btnDerechaClicked(View view){
-        imprimirTablero();
+        //imprimirTablero();
 
         posicionCentral = posicionCentral+1;
-        if(hayColisionLados()==false){
+        String btnDer = "btnDerechaClicked";
+        if(hayColisionLados(btnDer)==false){
             borrarFiguraAnterior();
             borrarPosicionAnterior();
             moverFiguraLados();
@@ -564,8 +539,8 @@ public class MainActivity extends AppCompatActivity {
     //Método que mueve la figura hacia la izquierda
     public void btnIzquierdaClicked(View view){
         posicionCentral = posicionCentral-1;
-
-        if(hayColisionLados()==false){
+        String btnIzq = "btnIzquierdaClicked";
+        if(hayColisionLados(btnIzq)==false){
             borrarFiguraAnterior();
             borrarPosicionAnterior();
             moverFiguraLados();
@@ -579,9 +554,11 @@ public class MainActivity extends AppCompatActivity {
     }
     //Método que mueve la figura hacia abajo
     public void btnAbajoClicked(View view){
-        imprimirTablero();
+        moverPieza();
+    }
+    public void moverPieza(){
+        //imprimirTablero();
         posicionCentralfilas = posicionCentralfilas+1;
-        //borrarCuadrosAnteriores();
         if(hayColisionAbajo()==false){
             borrarFiguraAnterior();
             borrarPosicionAnterior();
@@ -589,17 +566,18 @@ public class MainActivity extends AppCompatActivity {
             llenarTableroUnos();
             actualizarTableroGrafico();
         }else{
-            Boolean ver = verificarFilasCompletas();
             restaurarPosicionAnterior();
             if(verificarFilasCompletas()==true){
-                borrarFiguraAnterior();
-                actualizarTablero();
+                while(verificarFilasCompletas()==true){
+                    actualizarTablero();
+                    llenarTableroUnos();
+                    actualizarTableroGrafico();
+                }
                 escogerFigura();
                 ponerFigura();
                 llenarTableroUnos();
                 actualizarTableroGrafico();
             }else{
-                //convertirUnosaDos();
                 posicionCentralfilas = posicionCentralfilas-1;
                 escogerFigura();
                 ponerFigura();
@@ -608,10 +586,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    public void runnable(){
+        handler.post(caidaPieza);
+    }
     public void borrarFiguraAnterior(){
-        Log.i("ENTRÉ","----BORRARFIGURA---");
         int tamañoPoints = points.size()-1;
-        //HACER UN ARREGLO DE ARREGLOS
         ArrayList<String> temporal = new ArrayList<>();
         GridLayout grid = findViewById(R.id.boardLayout);
         int imagen = R.drawable.cuadrotransparente;
@@ -620,7 +599,6 @@ public class MainActivity extends AppCompatActivity {
             String x = String.valueOf(points.get(i).x);
             String y = String.valueOf(points.get(i).y);
             String coord = x+","+y;
-            Log.i("COORDENADS",coord);
             temporal.add(coord);
         }
         coordAnterioresFigura=temporal;
@@ -629,49 +607,6 @@ public class MainActivity extends AppCompatActivity {
         for(int i =0;i<=largoTotal;i++){
             for(int p=0;p<=points.size()-1;p++){
                 if(grid.getChildAt(i).getTag().equals(temporal.get(p))){
-                    Log.i("ENTRAMOS","AL IF");
-                    vista= (ImageView)grid.getChildAt(i);
-                    vista.setImageResource(imagen);
-                }
-            }
-        }
-    }
-    public void restaurarFigura(){
-        Log.i("ENTRÉ","----RESTAURARFIGURA---");
-        int tamañoPoints = points.size()-1;
-        //HACER UN ARREGLO DE ARREGLOS
-        ArrayList<String> temporal = new ArrayList<>();
-        GridLayout grid = findViewById(R.id.boardLayout);
-        Log.i("ENTRÉ","----RESTAURARFIGURA---");
-        int imagen = 0;
-
-        if(numeroAleatorio==0){
-            imagen=R.drawable.cuadroamarillo;
-            Log.i("ENTRÉ","----AMA---");
-        }
-        if(numeroAleatorio==1){
-            imagen=R.drawable.cuadroceleste;
-            Log.i("ENTRÉ","----CELE---");
-        }
-        if(numeroAleatorio==2){
-            imagen=R.drawable.cuadromorado;
-            Log.i("ENTRÉ","----MORA---");
-        }
-        if(numeroAleatorio==3){
-            imagen=R.drawable.cuadroverde;
-            Log.i("ENTRÉ","----VER---");
-        }
-        if(numeroAleatorio==4){
-            imagen=R.drawable.cuadrorojo;
-            Log.i("ENTRÉ","----ROJ---");
-        }
-
-        int largoTotal =(filas*totalColumnas)-1;
-        ImageView vista = new ImageView(MainActivity.this);
-        for(int i =0;i<=largoTotal;i++){
-            for(int p=0;p<=coordAnterioresFigura.size()-1;p++){
-                if(grid.getChildAt(i).getTag().equals(coordAnterioresFigura.get(p))){
-                    Log.i("ENTRAMOS","AL IF");
                     vista= (ImageView)grid.getChildAt(i);
                     vista.setImageResource(imagen);
                 }
@@ -681,32 +616,16 @@ public class MainActivity extends AppCompatActivity {
     //Método que rota la figura
     public void btnRotarClicked(View view){
         if(nombreFiguraActual !="C"){
-            Log.i("TABLERO","ANTES++++++++++++++++"+tableroUnos.toString());
-            //borrarCuadrosAnteriores();
             if(hayColisionRotar()==false){
-                Log.i("ENTRE","NO COLISION");
                 borrarCuadrosAnteriores();
                 borrarPosicionAnterior();
                 rotarFigura();
                 llenarTableroUnos();
-                //Log.i("TABLEROc",tableroUnos.toString());
                 actualizarTableroGrafico();
-                Log.i("TABLERO","DESPUES SI NO HAY COLISIÓN++++++++++++++++"+tableroUnos.toString());
             }else{
-                Log.i("TABLERO","DESPUES HAY COLISION++++++++++++++++"+tableroUnos.toString());
-                //restaurarPosicionAnterior();
                 borrarCuadrosAnteriores();
                 llenarTableroUnos();
-                //Log.i("TABLEROU",tableroUnos.toString());
                 actualizarTableroGrafico();
-                //restaurarFigura();
-                //borrarFiguraAnterior();
-                //llenarTableroUnos();
-                //restaurarPosicionAnterior();
-                //borrarFiguraAnterior();
-                //restaurarPosicionAnterior();
-                //llenarTableroUnos();
-
             }
         }
     }
@@ -736,9 +655,9 @@ public class MainActivity extends AppCompatActivity {
         figuraBaseT.setNombre("T");
         figuraBaseT.setFiguraBase(linea1,linea2,linea3);
 
-        linea1 = new ArrayList<Integer>(Arrays.asList(0, 0, 1));
-        linea2 = new ArrayList<Integer>(Arrays.asList(0, 1, 1));
-        linea3 = new ArrayList<Integer>(Arrays.asList(0, 0, 1));
+        linea1 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
+        linea2 = new ArrayList<Integer>(Arrays.asList(1, 1, 0));
+        linea3 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
         figuraBaseT.setRotacion1(linea1,linea2,linea3);
 
         linea1 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
@@ -746,9 +665,9 @@ public class MainActivity extends AppCompatActivity {
         linea3 = new ArrayList<Integer>(Arrays.asList(0, 0, 0));
         figuraBaseT.setRotacion2(linea1,linea2,linea3);
 
-        linea1 = new ArrayList<Integer>(Arrays.asList(1, 0, 0));
-        linea2 = new ArrayList<Integer>(Arrays.asList(1, 1, 0));
-        linea3 = new ArrayList<Integer>(Arrays.asList(1, 0, 0));
+        linea1 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
+        linea2 = new ArrayList<Integer>(Arrays.asList(0, 1, 1));
+        linea3 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
         figuraBaseT.setRotacion3(linea1,linea2,linea3);
 
         //Agrega el objeto figuraBaseT al arreglo
@@ -851,8 +770,8 @@ public class MainActivity extends AppCompatActivity {
         linea3 = new ArrayList<Integer>(Arrays.asList(0, 1, 0));
         figuraBaseP.setFiguraBase(linea1, linea2, linea3);
 
-        linea1 = new ArrayList<Integer>(Arrays.asList(1, 1, 1));
-        linea2 = new ArrayList<Integer>(Arrays.asList(0, 0, 0));
+        linea1 = new ArrayList<Integer>(Arrays.asList(0, 0, 0));
+        linea2 = new ArrayList<Integer>(Arrays.asList(1, 1, 1));
         linea3 = new ArrayList<Integer>(Arrays.asList(0, 0, 0));
         figuraBaseP.setRotacion1(linea1,linea2,linea3);
 
@@ -897,7 +816,7 @@ public class MainActivity extends AppCompatActivity {
         }
         tablero[1]= filaCeros;
     }
-    //---------------------------------------------------------------TABLERO FISICO------------------------------------------------------------------------
+    //---------------------------------------------------------------TABLERO GRÁFICO------------------------------------------------------------------------
     //Método que se encarga de la creación del tablero físico con el uso de GridLayout
     public void crearTableroInterfaz(){
 
@@ -919,12 +838,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    public void probarTags(){
-        GridLayout grid = findViewById(R.id.boardLayout);
-        for(int i = 0;i<=tags.size()-1;i++){
-            Log.i("TAG"+String.valueOf(i)+": ",String.valueOf(grid.getChildAt(i).getTag()));
-        }
-    }
     //Método que determina si es un borde para la creación del tablero físico
     public boolean esBorde(int pNumero){
         int [] bordes = {0,1,2,3,4,5,6,7,8,9,10,11,
@@ -943,37 +856,27 @@ public class MainActivity extends AppCompatActivity {
         }
         return estado;
     }
-    //Método que escoge el color de la figura actual
-    public void escogerColorFigura(){
-        int largoListaColores = Colores.size()-1;
-        numeroAleatorio = numeroAleatorio(largoListaColores);
-        Log.i("COLOR",String.valueOf(numeroAleatorio));
-    }
     //Método que dibuja la figura en el tablero gráfico
     public void actualizarTableroGrafico(){
+
         GridLayout grid = findViewById(R.id.boardLayout);
         int columnasIni = grid.getColumnCount();
         int filasIni = grid.getRowCount();
         int tamaño = (columnasIni*filasIni)-1;
         int imagen = R.drawable.cuadrotransparente;
 
-
-        if(numeroAleatorio==0){
-            imagen=R.drawable.cuadroamarillo;
-        }
-        if(numeroAleatorio==1){
-            imagen=R.drawable.cuadroceleste;
-        }
-        if(numeroAleatorio==2){
-            imagen=R.drawable.cuadromorado;
-        }
-        if(numeroAleatorio==3){
-            imagen=R.drawable.cuadroverde;
-        }
-        if(numeroAleatorio==4){
-            imagen=R.drawable.cuadrorojo;
-        }
         ImageView v = new ImageView(MainActivity.this);
+        for(int i=0;i<=tamaño;i++){
+            if(tableroUnos.get(i) == 0){
+                v= (ImageView)grid.getChildAt(i);
+                v.setImageResource(imagen);
+
+            }
+        }
+
+        imagen=R.drawable.cuadroceleste;
+
+        //ImageView v = new ImageView(MainActivity.this);
         for(int i=0;i<=tamaño;i++){
             if(tableroUnos.get(i) == 1){
                 v= (ImageView)grid.getChildAt(i);
@@ -1000,19 +903,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //--------------------------------------------------------------MÉTODOS AUXILIARES---------------------------------------------
-    public int[][] tableroToSubarreglo(ArrayList<ArrayList<Integer>> pNuevoTablero){
-        int largoArreglo = pNuevoTablero.size()-1;
-        ArrayList<Integer> subArreglo = pNuevoTablero.get(0);
-        int[][] tableroNuevo = new int[filas][totalColumnas];
-        for(int i=0; i<=largoArreglo;i++){
-            subArreglo = pNuevoTablero.get(i);
-            int largoSubArreglo = subArreglo.size()-1;
-            for(int p=0;p<=largoSubArreglo;p++){
-                tableroNuevo[i][p] = subArreglo.get(p);
-            }
-        }
-        return tableroNuevo;
-    }
     //Convierte el tablero a toString
     public String tablerotoString() {
         String impresionTablero = "";
@@ -1030,23 +920,4 @@ public class MainActivity extends AppCompatActivity {
         String tableroStr = tablerotoString();
         Log.i("TABLERO:",tableroStr);
     }
-    //Imprimir lista points en consola
-    public void imprimirPoints(){
-        String puntosStr = points.toString();
-        Log.i("COORDENADAS:",puntosStr);
-    }
-    //Imprimir subarreglos en consola
-    /*public void subarregloToString(){
-        int largoDelArreglo = subarreglo.length-1;
-        int[] subArreglo = subarreglo[1];
-        int largoDelSubArreglo = subArreglo.length-1;
-        String subArregloStr ="";
-        for(int i=0;i<=largoDelArreglo;i++){
-            subArregloStr=subArregloStr+"(";
-            for(int p=0;p<=largoDelSubArreglo;p++){
-                subArregloStr = subArregloStr+String.valueOf(subarreglo[i][p]);
-            }
-            subArregloStr=subArregloStr+")";
-        }
-    }*/
 }
